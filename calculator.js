@@ -230,6 +230,56 @@
     };
   }
 
+  function calculateManualPlan(assets, lotsById = {}, settings = {}) {
+    const normalized = normalizeSettings(settings);
+    const before = calculateSnapshot(assets);
+    const errors = [];
+    const items = assets.map((asset, index) => {
+      const label = asset.name || asset.code || `第 ${index + 1} 项资产`;
+      const rawLots = Number(lotsById[asset.id] ?? 0);
+      const validLots = Number.isInteger(rawLots) && rawLots >= 0;
+      const lots = validLots ? rawLots : 0;
+      if (!validLots) errors.push(`${label}的实际买入手数必须是非负整数`);
+      if (lots > 0 && asset.paused) errors.push(`${label}已暂停买入，请将实际手数改为 0`);
+      if (lots > 0 && number(asset.price) <= 0) errors.push(`${label}价格缺失，不能实际买入`);
+      const shares = lots * Math.max(1, Math.trunc(number(asset.lotSize, 100)));
+      const amount = money(shares * Math.max(0, number(asset.price)));
+      const commission = lots > 0 ? calculateCommission(amount, normalized) : 0;
+      return {
+        id: asset.id,
+        code: asset.code,
+        name: asset.name,
+        lots,
+        shares,
+        amount,
+        commission,
+        totalCost: money(amount + commission),
+      };
+    });
+    const spent = money(items.reduce((sum, item) => sum + item.totalCost, 0));
+    if (spent > normalized.availableCash + 0.001) {
+      errors.push(`实际买入总支出 ¥${spent.toFixed(2)} 超过可用资金 ¥${normalized.availableCash.toFixed(2)}`);
+    }
+    const afterAssets = assets.map((asset) => {
+      const buy = items.find((item) => item.id === asset.id);
+      return { ...asset, quantity: number(asset.quantity) + (buy ? buy.shares : 0) };
+    });
+    const after = calculateSnapshot(afterAssets);
+    return {
+      mode: 'manual',
+      valid: errors.length === 0,
+      errors,
+      items,
+      availableCash: normalized.availableCash,
+      spent,
+      remainingCash: money(normalized.availableCash - spent),
+      deviationBefore: portfolioDeviation(before.items),
+      deviationAfter: portfolioDeviation(after.items),
+      before,
+      after,
+    };
+  }
+
   return {
     DEFAULT_ASSETS,
     cloneDefaults,
@@ -239,6 +289,7 @@
     calculateCommission,
     calculateTheoreticalPlan,
     calculateExecutablePlan,
+    calculateManualPlan,
     portfolioDeviation,
   };
 });

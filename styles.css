@@ -68,6 +68,7 @@ td { padding: 10px 8px; border-bottom: 1px solid #ece9e1; font-size: 14px; verti
 .asset-table td:nth-child(7) { padding-top: 22px; }
 .asset-table td:nth-child(8) { padding-top: 14px; }
 .asset-table input::placeholder { color: #9aa39e; }
+.mobile-asset-toggle, .mobile-asset-actions { display: none; }
 .delete-row { width: 30px; height: 30px; margin-top: 0; padding: 0; border-radius: 50%; background: transparent; color: var(--red); font-size: 20px; line-height: 1; }
 .delete-row:hover { background: var(--red-soft); }
 .quote-time { display: block; min-width: 112px; margin-top: 4px; color: var(--muted); font-size: 10px; }
@@ -123,6 +124,7 @@ td { padding: 10px 8px; border-bottom: 1px solid #ece9e1; font-size: 14px; verti
 .reason { color: var(--muted); font-size: 12px; }
 .buy { color: var(--green); font-weight: 800; }
 .confirm { width: 100%; margin-top: 16px; }
+.manual-lots { width: 82px !important; min-width: 72px; margin: 0 !important; }
 .empty { color: var(--muted); text-align: center; padding: 14px; }
 @media (max-width: 850px) {
   .hero { align-items: start; flex-direction: column; }
@@ -162,8 +164,30 @@ td { padding: 10px 8px; border-bottom: 1px solid #ece9e1; font-size: 14px; verti
   .asset-table td:nth-child(7)::before { content: "暂停买入"; }
   .asset-table td:nth-child(8)::before { content: "操作"; }
   .asset-table input { min-width: 0; }
+  #add-asset { display: none; }
+  .mobile-asset-toggle { display: flex; grid-column: 1 / -1; width: 100%; padding: 4px 0; align-items: center; justify-content: space-between; gap: 10px; color: var(--ink); background: transparent; text-align: left; }
+  .mobile-asset-toggle span, .mobile-asset-toggle strong, .mobile-asset-toggle small { display: block; }
+  .mobile-asset-toggle small { margin-top: 3px; color: var(--muted); font-weight: 400; }
+  .mobile-asset-toggle b { color: var(--green); font-size: 12px; }
+  .asset-row.is-collapsed td:not(:first-child) { display: none; }
+  .asset-row.is-collapsed td:first-child { display: block; padding: 0; }
+  .asset-row.is-collapsed td:first-child::before, .asset-row.is-collapsed td:first-child > .name-input { display: none; }
+  .mobile-asset-actions { position: sticky; bottom: 10px; z-index: 4; display: block; margin-top: 12px; padding: 8px; border-radius: 12px; background: rgba(255, 253, 248, .94); box-shadow: 0 6px 20px rgba(30, 48, 40, .12); }
+  .mobile-asset-actions button { width: 100%; min-height: 46px; }
   .delete-row { min-height: 44px; }
   .history .section-heading { flex-direction: column; }
   .allocation-row { grid-template-columns: 1fr; gap: 6px; }
   .mode-title p { white-space: normal; }
+  .executable-panel table { min-width: 100%; }
+  .executable-panel thead { display: none; }
+  .executable-panel tbody, .executable-panel tr, .executable-panel td { display: block; width: 100%; }
+  .executable-panel tr { margin-bottom: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+  .executable-panel td { display: grid; grid-template-columns: 88px 1fr; align-items: center; gap: 8px; padding: 6px 0; border: 0; }
+  .executable-panel td::before { color: var(--muted); font-size: 11px; font-weight: 700; }
+  .executable-panel td:nth-child(1)::before { content: "资产"; }
+  .executable-panel td:nth-child(2)::before { content: "系统建议"; }
+  .executable-panel td:nth-child(3)::before { content: "实际手数"; }
+  .executable-panel td:nth-child(4)::before { content: "成交金额"; }
+  .executable-panel td:nth-child(5)::before { content: "佣金"; }
+  .executable-panel td:nth-child(6)::before { content: "说明"; }
 }

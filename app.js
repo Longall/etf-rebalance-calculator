@@ -77,8 +77,8 @@
 
   function renderAssets() {
     $('#asset-rows').innerHTML = state.assets.map((item, index) => `
-      <tr data-index="${index}">
-        <td><input class="name-input" type="text" data-field="name" value="${escapeHtml(item.name)}" placeholder="自定义行业ETF或个股" aria-label="资产名称"></td>
+      <tr class="asset-row is-collapsed" data-index="${index}">
+        <td><button type="button" class="mobile-asset-toggle" data-toggle-asset aria-expanded="false"><span><strong>${escapeHtml(item.name || '未命名资产')}</strong><small>${escapeHtml(item.code || '未填写代码')} · 目标 ${formatPercent(item.target)}</small></span><b>展开</b></button><input class="name-input" type="text" data-field="name" value="${escapeHtml(item.name)}" placeholder="自定义行业ETF或个股" aria-label="资产名称"></td>
         <td><input class="code-input" type="text" data-field="code" value="${escapeHtml(item.code)}" aria-label="资产代码" placeholder="可选"></td>
         <td><input type="number" data-field="quantity" min="0" step="1" value="${item.quantity}" aria-label="持有份数"></td>
         <td><input type="number" data-field="price" min="0" step="0.001" value="${item.price || ''}" aria-label="最新价格" placeholder="必填"><small class="quote-time">${escapeHtml(item.quoteUpdatedAt ? `更新 ${item.quoteUpdatedAt}` : '可手工输入')}</small></td>
@@ -189,21 +189,23 @@
     showMessages(missingPrices.length ? [...missingPrices, '缺少价格的资产不会生成买入建议，其他资产仍可计算。', cashNotice].filter(Boolean) : ['方案已按当前输入生成。', cashNotice].filter(Boolean), missingPrices.length || cashNotice ? 'info' : 'success');
     const theoretical = calculator.calculateTheoreticalPlan(state.assets, state.settings);
     const executable = calculator.calculateExecutablePlan(state.assets, state.settings);
-    latestPlan = { theoretical, executable };
-    renderResults(theoretical, executable);
+    const manualLots = Object.fromEntries(executable.items.map((item) => [item.id, item.lots]));
+    const actual = calculator.calculateManualPlan(state.assets, manualLots, state.settings);
+    latestPlan = { theoretical, recommended: executable, actual };
+    renderResults(theoretical, executable, actual, true);
   }
 
-  function renderResults(theoretical, executable) {
+  function renderResults(theoretical, recommended, actual, shouldScroll = false) {
     $('#results').hidden = false;
-    const purchased = executable.items.filter((item) => item.shares > 0).length;
+    const purchased = actual.items.filter((item) => item.shares > 0).length;
     $('#metrics').innerHTML = `
-      <div class="metric"><span>本次可用资金</span><strong>¥${formatMoney(executable.availableCash)}</strong><small>已扣除预留现金</small></div>
-      <div class="metric"><span>建议支出（含佣金）</span><strong>¥${formatMoney(executable.spent)}</strong><small>${purchased} 笔买入</small></div>
-      <div class="metric"><span>剩余现金</span><strong>¥${formatMoney(executable.remainingCash)}</strong><small>不足整手或继续买入无改善</small></div>
-      <div class="metric"><span>组合偏差变化</span><strong>${executable.deviationBefore.toFixed(2)} → ${executable.deviationAfter.toFixed(2)}</strong><small>数值越低越接近目标</small></div>`;
+      <div class="metric"><span>本次可用资金</span><strong>¥${formatMoney(actual.availableCash)}</strong><small>已扣除预留现金</small></div>
+      <div class="metric"><span>实际支出（含佣金）</span><strong>¥${formatMoney(actual.spent)}</strong><small>${purchased} 笔买入</small></div>
+      <div class="metric"><span>剩余现金</span><strong>¥${formatMoney(actual.remainingCash)}</strong><small>${actual.valid ? '按实际手数计算' : '实际手数需要调整'}</small></div>
+      <div class="metric"><span>组合偏差变化</span><strong>${actual.deviationBefore.toFixed(2)} → ${actual.deviationAfter.toFixed(2)}</strong><small>数值越低越接近目标</small></div>`;
 
-    const beforeById = new Map(executable.before.items.map((item) => [item.id, item]));
-    const afterById = new Map(executable.after.items.map((item) => [item.id, item]));
+    const beforeById = new Map(actual.before.items.map((item) => [item.id, item]));
+    const afterById = new Map(actual.after.items.map((item) => [item.id, item]));
     $('#allocation-bars').innerHTML = state.assets.map((asset) => {
       const before = beforeById.get(asset.id) || { actual: 0 };
       const after = afterById.get(asset.id) || { actual: 0 };
@@ -219,15 +221,19 @@
 
     $('#theoretical-body').innerHTML = theoretical.items.map((item) => `
       <tr><td>${escapeHtml(item.name || '自定义资产')}</td><td>¥${formatMoney(item.amount)}</td><td>${item.estimatedShares.toFixed(2)}</td><td class="reason">${escapeHtml(item.reason || '按理论缺口分配')}</td></tr>`).join('');
-    $('#executable-body').innerHTML = executable.items.map((item) => `
-      <tr><td>${escapeHtml(item.name || '自定义资产')}</td><td class="${item.shares ? 'buy' : ''}">${item.shares ? `${item.lots} 手 / ${item.shares} 份` : '不买'}</td><td>¥${formatMoney(item.amount)}</td><td>¥${formatMoney(item.commission)}</td><td class="reason">${escapeHtml(item.reason || '低配且本手改善最大')}</td></tr>`).join('');
-    $('#confirm-execution').disabled = purchased === 0;
-    $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const actualById = new Map(actual.items.map((item) => [item.id, item]));
+    $('#executable-body').innerHTML = recommended.items.map((item) => {
+      const manual = actualById.get(item.id);
+      return `<tr><td>${escapeHtml(item.name || '自定义资产')}</td><td class="${item.shares ? 'buy' : ''}">${item.shares ? `${item.lots} 手 / ${item.shares} 份` : '不买'}</td><td><input class="manual-lots" type="number" min="0" step="1" inputmode="numeric" data-manual-lots="${escapeHtml(item.id)}" value="${manual.lots}" aria-label="${escapeHtml(item.name || '自定义资产')}实际买入手数"></td><td>¥${formatMoney(manual.amount)}</td><td>¥${formatMoney(manual.commission)}</td><td class="reason">${escapeHtml(item.reason || '低配且本手改善最大')}</td></tr>`;
+    }).join('');
+    $('#confirm-execution').disabled = purchased === 0 || !actual.valid;
+    if (shouldScroll) $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function confirmExecution() {
     if (!latestPlan) return;
-    const buys = latestPlan.executable.items.filter((item) => item.shares > 0);
+    if (!latestPlan.actual.valid) return showMessages(latestPlan.actual.errors);
+    const buys = latestPlan.actual.items.filter((item) => item.shares > 0);
     if (!buys.length) return;
     if (!window.confirm(`确认已执行 ${buys.length} 笔买入？这会更新持有份数、现金和历史记录。`)) return;
     const timestamp = new Date();
@@ -247,7 +253,7 @@
         commission: buy.commission,
       });
     });
-    state.settings.currentCash = Math.max(0, Math.round((state.settings.currentCash + state.settings.contribution - latestPlan.executable.spent) * 100) / 100);
+    state.settings.currentCash = Math.max(0, Math.round((state.settings.currentCash + state.settings.contribution - latestPlan.actual.spent) * 100) / 100);
     state.settings.contribution = 0;
     saveState();
     syncSettingsToUI();
@@ -311,6 +317,22 @@
     download(`etf-history-${new Date().toISOString().slice(0, 10)}.csv`, `\uFEFF${rows.map((row) => row.map(quote).join(',')).join('\r\n')}`, 'text/csv;charset=utf-8');
   }
 
+  function addAsset() {
+    state.assets.push(normalizeAsset({ id: `asset-${Date.now()}`, name: '', target: 0, lotSize: 100 }));
+    saveState();
+    renderAssets();
+    const rows = document.querySelectorAll('#asset-rows .asset-row');
+    const row = rows[rows.length - 1];
+    if (row) {
+      row.classList.remove('is-collapsed');
+      const toggle = row.querySelector('[data-toggle-asset]');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.querySelector('b').textContent = '收起';
+      }
+    }
+  }
+
   $('#asset-rows').addEventListener('input', (event) => {
     const row = event.target.closest('tr');
     const field = event.target.dataset.field;
@@ -323,6 +345,14 @@
     saveState();
   });
   $('#asset-rows').addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-toggle-asset]');
+    if (toggle) {
+      const row = toggle.closest('.asset-row');
+      const collapsed = row.classList.toggle('is-collapsed');
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.querySelector('b').textContent = collapsed ? '展开' : '收起';
+      return;
+    }
     const button = event.target.closest('[data-delete]');
     if (!button) return;
     if (state.assets.length === 1) return showMessages(['至少需要保留一项资产。']);
@@ -333,10 +363,15 @@
   ['current-cash', 'contribution', 'reserve-cash', 'commission-rate', 'minimum-commission', 'use-current-cash', 'reduce-transactions'].forEach((id) => {
     $(`#${id}`).addEventListener('input', () => { readSettings(); saveState(); renderOverview(); });
   });
-  $('#add-asset').addEventListener('click', () => {
-    state.assets.push(normalizeAsset({ id: `asset-${Date.now()}`, name: '', target: 0, lotSize: 100 }));
-    saveState();
-    renderAssets();
+  $('#add-asset').addEventListener('click', addAsset);
+  $('#add-asset-mobile').addEventListener('click', addAsset);
+  $('#executable-body').addEventListener('change', (event) => {
+    if (!event.target.matches('[data-manual-lots]') || !latestPlan) return;
+    const lotsById = Object.fromEntries(Array.from(document.querySelectorAll('[data-manual-lots]')).map((input) => [input.dataset.manualLots, Number(input.value)]));
+    latestPlan.actual = calculator.calculateManualPlan(state.assets, lotsById, state.settings);
+    renderResults(latestPlan.theoretical, latestPlan.recommended, latestPlan.actual);
+    if (latestPlan.actual.valid) showMessages(['已按实际手数重新计算，确认执行时将使用实际手数。'], 'success');
+    else showMessages(latestPlan.actual.errors);
   });
   $('#calculate').addEventListener('click', calculate);
   $('#refresh-all-quotes').addEventListener('click', refreshAllQuotes);

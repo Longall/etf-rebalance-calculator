@@ -74,3 +74,17 @@ test('配置横条统一使用真实的零到百分之百刻度', () => {
   assert.match(app, /width:\$\{Math\.min\(100, Math\.max\(0, before\.actual\)\)\}%/);
   assert.match(app, /width:\$\{Math\.min\(100, Math\.max\(0, after\.actual\)\)\}%/);
 });
+
+test('手机版资产支持折叠编辑并在列表底部提供添加按钮', () => {
+  assert.match(app, /class="mobile-asset-toggle"/);
+  assert.match(html, /id="add-asset-mobile"/);
+  assert.match(css, /\.asset-row\.is-collapsed/);
+  assert.match(css, /\.mobile-asset-actions/);
+});
+
+test('整手模式提供实际手数输入并按实际方案确认', () => {
+  assert.match(html, /<th>实际手数<\/th>/);
+  assert.match(app, /data-manual-lots/);
+  assert.match(app, /calculateManualPlan/);
+  assert.match(app, /latestPlan\.actual/);
+});

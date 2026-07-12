@@ -7,6 +7,7 @@ const {
   calculateSnapshot,
   calculateTheoreticalPlan,
   calculateExecutablePlan,
+  calculateManualPlan,
   portfolioDeviation,
   calculatePortfolioSummary,
   calculateCommission,
@@ -181,4 +182,30 @@ test('目标比例低于 100% 时差额作为现金比例且不报错', () => {
 test('目标比例超过 100% 时仍然报错', () => {
   const validation = validatePortfolio([asset({ target: 101 })]);
   assert.match(validation.errors.join('\n'), /不能超过 100%/);
+});
+
+test('实际手数方案按用户输入重新计算金额、佣金和买后比例', () => {
+  const assets = [
+    asset({ id: 'a', price: 10, target: 50 }),
+    asset({ id: 'b', code: 'B', price: 5, target: 50 }),
+  ];
+  const plan = calculateManualPlan(assets, { a: 1, b: 2 }, {
+    contribution: 2500,
+    commissionRate: 0,
+    minimumCommission: 0,
+  });
+  assert.equal(plan.valid, true);
+  assert.deepEqual(plan.items.map((item) => item.lots), [1, 2]);
+  assert.deepEqual(plan.items.map((item) => item.shares), [100, 200]);
+  assert.deepEqual(plan.items.map((item) => item.amount), [1000, 1000]);
+  assert.equal(plan.spent, 2000);
+  assert.equal(plan.remainingCash, 500);
+  assert.equal(plan.after.items[0].actual, 50);
+});
+
+test('实际手数必须为非负整数且不能突破预算或买入暂停资产', () => {
+  const assets = [asset({ id: 'a', target: 100 })];
+  assert.match(calculateManualPlan(assets, { a: 1.5 }, { contribution: 5000 }).errors.join('\n'), /非负整数/);
+  assert.match(calculateManualPlan(assets, { a: 6 }, { contribution: 5000 }).errors.join('\n'), /超过可用资金/);
+  assert.match(calculateManualPlan([{ ...assets[0], paused: true }], { a: 1 }, { contribution: 5000 }).errors.join('\n'), /已暂停买入/);
 });

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'etf-rebalance-shell-';
-const CACHE_NAME = 'etf-rebalance-shell-v1';
+const CACHE_NAME = 'etf-rebalance-shell-v2';
 const APP_SHELL = [
   './',
   './index.html',
