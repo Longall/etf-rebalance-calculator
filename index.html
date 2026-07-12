@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="离线可用的中文ETF定投再平衡计算器">
+  <meta name="theme-color" content="#17231f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ETF Rebalance">
+  <title>ETF 定投再平衡计算器</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">本地离线 · 数据仅保存在浏览器</p>
+      <h1>ETF 定投再平衡计算器</h1>
+      <p>把新增资金优先投入低配资产，生成能按整手下单的执行清单。</p>
+    </div>
+    <div class="hero-actions">
+      <button type="button" class="secondary" id="export-json">导出配置</button>
+      <label class="button secondary" for="import-json">导入配置</label>
+      <input id="import-json" type="file" accept="application/json,.json" hidden>
+      <button type="button" class="danger-ghost" id="reset-all">重置</button>
+    </div>
+  </header>
+
+  <div id="pwa-status" class="pwa-notice pwa-status" role="status" hidden></div>
+  <div id="pwa-update" class="pwa-notice pwa-update" role="status" hidden>
+    <span>ETF Rebalance 已有新版本。</span>
+    <div><button type="button" id="pwa-refresh">立即更新</button><button type="button" id="pwa-dismiss">稍后</button></div>
+  </div>
+
+  <main>
+    <section class="panel overview-panel" aria-labelledby="overview-title">
+      <div class="section-heading"><div><span class="step">00</span><h2 id="overview-title">目前资产情况</h2></div><span class="overview-note">根据当前持仓和价格实时计算</span></div>
+      <div class="metrics overview-metrics" id="overview-metrics"></div>
+      <div class="table-wrap"><table class="positions-table"><thead><tr><th>代码</th><th>名称</th><th>持有份数</th><th>最新价格</th><th>当前市值</th><th>持仓占比</th></tr></thead><tbody id="position-list"></tbody></table></div>
+      <p class="empty" id="positions-empty">暂时没有持仓。请在“资产与目标”中填写持有份数和价格。</p>
+    </section>
+
+    <section class="panel" aria-labelledby="fund-title">
+      <div class="section-heading">
+        <div><span class="step">01</span><h2 id="fund-title">资金设置</h2></div>
+        <span class="save-state" id="save-state" aria-live="polite">已自动保存</span>
+      </div>
+      <div class="settings-grid">
+        <label>当前现金（元）<small>账户已有或上月结转的现金</small><input id="current-cash" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <label>本月新增（元）<small>本月准备额外投入的资金</small><input id="contribution" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <label>预留现金（元）<small>本次计算后希望保留的现金</small><input id="reserve-cash" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <label>佣金费率（万分之）<small>例如 2.5 表示万分之 2.5</small><input id="commission-rate" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <label>单笔最低佣金（元）<small>佣金取比例金额与此数较大值</small><input id="minimum-commission" type="number" min="0" step="0.01" inputmode="decimal"></label>
+      </div>
+      <div class="toggle-row">
+        <label class="toggle"><input id="use-current-cash" type="checkbox"><span></span>使用当前现金参与本次再平衡</label>
+        <label class="toggle"><input id="reduce-transactions" type="checkbox"><span></span>同等改善时优先减少交易笔数</label>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="asset-title">
+      <div class="section-heading">
+        <div><span class="step">02</span><h2 id="asset-title">资产与目标</h2></div>
+        <div class="inline-actions"><button type="button" class="secondary" id="refresh-all-quotes">刷新全部行情</button><button type="button" class="secondary" id="add-asset">＋ 添加资产</button></div>
+      </div>
+      <div class="table-wrap">
+        <table class="asset-table">
+          <thead><tr><th>名称</th><th>代码</th><th>持有份数</th><th>最新价格</th><th>目标比例</th><th>每手份数</th><th>暂停</th><th></th></tr></thead>
+          <tbody id="asset-rows"></tbody>
+        </table>
+      </div>
+      <div class="target-summary"><span>目标比例合计</span><strong id="target-total">100%</strong></div>
+    </section>
+
+    <section class="calculate-bar">
+      <div><strong>计算与配置仍保存在本机</strong><span>行情可联网刷新，也可随时手工修改价格。</span></div>
+      <button type="button" class="primary" id="calculate">生成本月方案</button>
+    </section>
+
+    <div id="messages" class="messages" aria-live="polite"></div>
+
+    <section id="results" class="results" hidden aria-labelledby="result-title">
+      <div class="section-heading result-heading"><div><span class="step">03</span><h2 id="result-title">再平衡结果</h2></div></div>
+      <div class="metrics" id="metrics"></div>
+
+      <div class="panel">
+        <h3>当前配置与买入后配置</h3>
+        <div id="allocation-bars" class="allocation-bars"></div>
+      </div>
+
+      <div class="result-grid">
+        <article class="panel">
+          <div class="mode-title"><div><span class="tag">参考</span><h3>理论模式</h3></div><p>允许零碎份额，不考虑整手和佣金。</p></div>
+          <div class="table-wrap"><table><thead><tr><th>资产</th><th>建议金额</th><th>估算份数</th><th>说明</th></tr></thead><tbody id="theoretical-body"></tbody></table></div>
+        </article>
+        <article class="panel executable-panel">
+          <div class="mode-title"><div><span class="tag success">可执行</span><h3>整手模式</h3></div><p>逐手优化偏差，每项买入按整笔计佣金。</p></div>
+          <div class="table-wrap"><table><thead><tr><th>资产</th><th>买入</th><th>成交金额</th><th>佣金</th><th>说明</th></tr></thead><tbody id="executable-body"></tbody></table></div>
+          <button type="button" class="primary confirm" id="confirm-execution">确认已执行</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel history" aria-labelledby="history-title">
+      <div class="section-heading">
+        <div><span class="step">04</span><h2 id="history-title">执行历史</h2></div>
+        <div class="inline-actions"><button type="button" class="secondary" id="export-csv">导出 CSV</button><button type="button" class="danger-ghost" id="clear-history">删除历史</button></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>日期</th><th>资产</th><th>价格</th><th>份数</th><th>金额</th><th>佣金</th></tr></thead><tbody id="history-body"></tbody></table></div>
+      <p class="empty" id="history-empty">还没有确认执行的记录。</p>
+    </section>
+  </main>
+
+  <script src="calculator.js"></script>
+  <script src="quotes.js"></script>
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>
