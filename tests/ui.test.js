@@ -88,3 +88,12 @@ test('整手模式提供实际手数输入并按实际方案确认', () => {
   assert.match(app, /calculateManualPlan/);
   assert.match(app, /latestPlan\.actual/);
 });
+
+test('手机端模式标题不拆字且资产编辑控件统一对齐', () => {
+  assert.match(css, /@media \(max-width: 540px\)[\s\S]*\.mode-title\s*\{[^}]*flex-direction:\s*column/);
+  assert.match(css, /\.mode-title h3[^}]*white-space:\s*nowrap/);
+  assert.match(css, /\.asset-table td:first-child > \.name-input[^}]*grid-column:\s*2/);
+  assert.match(css, /\.asset-table td:nth-child\(4\) \.quote-time[^}]*grid-column:\s*2/);
+  assert.match(css, /\.asset-table td:nth-child\(7\) input\[type="checkbox"\][^}]*width:\s*28px/);
+  assert.match(css, /\.asset-table td:nth-child\(8\) \.delete-row[^}]*width:\s*28px/);
+});

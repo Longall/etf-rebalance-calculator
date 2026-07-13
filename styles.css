@@ -118,6 +118,7 @@ td { padding: 10px 8px; border-bottom: 1px solid #ece9e1; font-size: 14px; verti
 .result-grid > .panel > .table-wrap { flex: 1; }
 .result-grid .confirm { margin-top: auto; padding-top: 12px; }
 .mode-title { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+.mode-title h3 { white-space: nowrap; }
 .mode-title p { margin: 0; max-width: none; flex-shrink: 0; color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; }
 .tag { padding: 3px 7px; border-radius: 5px; background: var(--gold-soft); color: var(--gold); font-size: 11px; font-weight: 800; }
 .tag.success { color: var(--green); background: var(--green-soft); }
@@ -165,19 +166,23 @@ td { padding: 10px 8px; border-bottom: 1px solid #ece9e1; font-size: 14px; verti
   .asset-table td:nth-child(8)::before { content: "操作"; }
   .asset-table input { min-width: 0; }
   #add-asset { display: none; }
-  .mobile-asset-toggle { display: flex; grid-column: 1 / -1; width: 100%; padding: 4px 0; align-items: center; justify-content: space-between; gap: 10px; color: var(--ink); background: transparent; text-align: left; }
+  .mobile-asset-toggle { display: flex; grid-column: 1 / -1; grid-row: 1; width: 100%; padding: 4px 0 10px; align-items: center; justify-content: space-between; gap: 10px; color: var(--ink); background: transparent; text-align: left; }
   .mobile-asset-toggle span, .mobile-asset-toggle strong, .mobile-asset-toggle small { display: block; }
   .mobile-asset-toggle small { margin-top: 3px; color: var(--muted); font-weight: 400; }
   .mobile-asset-toggle b { color: var(--green); font-size: 12px; }
+  .asset-table td:first-child::before { grid-column: 1; grid-row: 2; }
+  .asset-table td:first-child > .name-input { grid-column: 2; grid-row: 2; }
+  .asset-table td:nth-child(4) .quote-time { grid-column: 2; margin: -2px 0 0; }
+  .asset-table td:nth-child(7) input[type="checkbox"], .asset-table td:nth-child(8) .delete-row { justify-self: start; width: 28px; height: 28px; min-height: 28px; margin: 0; padding: 0; }
   .asset-row.is-collapsed td:not(:first-child) { display: none; }
   .asset-row.is-collapsed td:first-child { display: block; padding: 0; }
   .asset-row.is-collapsed td:first-child::before, .asset-row.is-collapsed td:first-child > .name-input { display: none; }
   .mobile-asset-actions { position: sticky; bottom: 10px; z-index: 4; display: block; margin-top: 12px; padding: 8px; border-radius: 12px; background: rgba(255, 253, 248, .94); box-shadow: 0 6px 20px rgba(30, 48, 40, .12); }
   .mobile-asset-actions button { width: 100%; min-height: 46px; }
-  .delete-row { min-height: 44px; }
   .history .section-heading { flex-direction: column; }
   .allocation-row { grid-template-columns: 1fr; gap: 6px; }
-  .mode-title p { white-space: normal; }
+  .mode-title { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .mode-title p { white-space: normal; text-align: left; }
   .executable-panel table { min-width: 100%; }
   .executable-panel thead { display: none; }
   .executable-panel tbody, .executable-panel tr, .executable-panel td { display: block; width: 100%; }

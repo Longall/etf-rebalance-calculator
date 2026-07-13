@@ -37,7 +37,7 @@ test('Service Worker 版本化缓存应用外壳且不缓存跨域行情', () =>
   for (const path of ['./index.html', './styles.css', './calculator.js', './quotes.js', './app.js', './pwa.js', './manifest.webmanifest']) {
     assert.match(sw, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
-  assert.match(sw, /etf-rebalance-shell-v2/);
+  assert.match(sw, /etf-rebalance-shell-v3/);
   assert.match(sw, /cache\.addAll\(APP_SHELL\)/);
   assert.match(sw, /key\.startsWith\(CACHE_PREFIX\)/);
   assert.match(sw, /request\.mode === 'navigate'/);
